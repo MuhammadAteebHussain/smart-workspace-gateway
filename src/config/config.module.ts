@@ -12,6 +12,9 @@ import configuration from './configuration';
         PORT: Joi.number().default(3000),
         API_PREFIX: Joi.string().default('api'),
         API_VERSION: Joi.string().default('1'),
+        AUTH_SERVICE_URL: Joi.string()
+          .uri()
+          .default('http://localhost:3001'),
       }),
     }),
   ],

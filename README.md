@@ -1,88 +1,55 @@
 # Smart Workspace — API Gateway
 
-NestJS API Gateway for the Smart Workspace platform. Built **step by step** so each phase is easy to understand.
+NestJS API Gateway. **Phase 2 Step 5** — auth proxy + JWT guard.
 
-## Current phase: 1 — Test routing
+## Routes
 
-Right now the gateway only has simple routes that respond directly. No auth, no proxy, no microservices yet.
-
-### What's running
-
-| Route | What it does |
-|-------|----------------|
-| `GET /api/v1/health` | Returns `{ status: "ok" }` |
-| `GET /api/v1/test/ping` | Returns `{ message: "pong" }` |
-| `GET /api/v1/test/hello/:name` | Returns a greeting with the name from the URL |
-
-### How a request flows (Phase 1)
-
-```
-Browser/curl
-    ↓
-GET /api/v1/test/ping
-    ↓
-main.ts          → sets global prefix "api", version "v1"
-    ↓
-TestController   → @Get('ping') handler runs
-    ↓
-JSON response    → { message: "pong" }
-```
-
-### Quick start
-
-```bash
-npm install
-npm run start:dev
-```
-
-Then try:
-
-```bash
-curl http://localhost:3000/api/v1/test/ping
-curl http://localhost:3000/api/v1/test/hello/Ateeb
-curl http://localhost:3000/api/v1/health
-```
+| Route | Auth | Description |
+|-------|------|-------------|
+| `GET /api/v1/health` | Public | Gateway health |
+| `GET /api/v1/health/services` | Public | Service discovery |
+| `POST /api/v1/auth/register` | Public | Proxy → auth service |
+| `POST /api/v1/auth/login` | Public | Proxy → auth service |
+| `GET /api/v1/test/ping` | Public | Test route |
+| `GET /api/v1/test/secret` | **JWT required** | Protected test route |
 
 Swagger: http://localhost:3000/api/docs
 
----
+## Quick start
 
-## Roadmap (coming next)
+```bash
+# Terminal 1 — auth
+cd ../smart-workspace-auth-service && npm run start:dev
 
-| Phase | What we add | You'll learn |
-|-------|-------------|--------------|
-| **1** ✅ | Test routes (`/health`, `/test/*`) | NestJS routing, modules, controllers |
-| **2** | Auth routing + JWT guard | Guards, `@Public()`, Auth Service client |
-| **3** | Proxy to one microservice | ProxyService, HTTP forwarding |
-| **4** | All microservice routes | Full gateway pattern |
-| **5** | Rate limiting, monitoring | Production hardening |
-
----
-
-## Project structure (Phase 1)
-
-```
-src/
-├── main.ts                 # App entry — prefix, versioning, Swagger
-├── app.module.ts           # Wires modules together
-├── config/                 # Environment variables
-├── common/interceptors/    # Request logging
-└── modules/
-    ├── health/             # GET /health
-    └── test/               # GET /test/ping, /test/hello/:name
+# Terminal 2 — gateway
+cp .env.example .env
+npm run start:dev
 ```
 
-## Scripts
+## Test flow
 
-| Command | Description |
-|---------|-------------|
-| `npm run start:dev` | Start with hot reload |
-| `npm run build` | Production build |
-| `npm run test:e2e` | Run e2e tests |
+```bash
+# Register via gateway
+curl -X POST http://localhost:3000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ateeb@example.com","password":"secret123"}'
 
-## Related repos (future phases)
+# Login via gateway
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ateeb@example.com","password":"secret123"}'
 
-- smart-workspace-auth-service
-- smart-workspace-user-service
-- smart-workspace-task-service
-- smart-workspace-infra
+# Protected route (use token from login)
+curl http://localhost:3000/api/v1/test/secret \
+  -H "Authorization: Bearer <accessToken>"
+
+# Without token → 401
+curl http://localhost:3000/api/v1/test/secret
+```
+
+## Environment
+
+| Variable | Default |
+|----------|---------|
+| `PORT` | `3000` |
+| `AUTH_SERVICE_URL` | `http://localhost:3001` |

@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { VersioningType } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -18,12 +18,24 @@ async function bootstrap() {
     defaultVersion: configService.get<string>('apiVersion')!,
   });
 
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Smart Workspace API Gateway')
-    .setDescription('Phase 1: test routing only. Auth and microservice proxy come later.')
+    .setDescription(
+      'Phase 2 Step 5: auth proxy + JWT guard. Public: health, login, register. Protected: other routes.',
+    )
     .setVersion('1.0')
-    .addTag('Health', 'Is the gateway running?')
-    .addTag('Test', 'Simple routes to learn how routing works')
+    .addBearerAuth()
+    .addTag('Health', 'Gateway health + service discovery')
+    .addTag('Auth', 'Login & register (proxied to Auth Service)')
+    .addTag('Test', 'Public and protected test routes')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
@@ -31,8 +43,9 @@ async function bootstrap() {
 
   await app.listen(port);
   console.log(`Gateway running on http://localhost:${port}/${apiPrefix}/v1`);
-  console.log(`Try:       http://localhost:${port}/${apiPrefix}/v1/test/ping`);
   console.log(`Swagger:   http://localhost:${port}/${apiPrefix}/docs`);
+  console.log(`Login:     POST http://localhost:${port}/${apiPrefix}/v1/auth/login`);
+  console.log(`Protected: GET  http://localhost:${port}/${apiPrefix}/v1/test/secret`);
 }
 
 bootstrap();
